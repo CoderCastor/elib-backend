@@ -1,11 +1,16 @@
-import express from 'express'
+import express from "express";
+import globalErrorHandler from "./middleware/globalErrorHandler";
 
-const app = express()
+const app = express();
 
-app.get("/",(req,res)=>{
-    res.json({
-        message: "Welcome to Elib APIs"
-    })
-}) 
+app.get("/", (req, res,next) => {
+
+
+  res.json({
+    message: "Welcome to Elib APIs",
+  });
+});
+
+app.use(globalErrorHandler);
 
 export default app;
