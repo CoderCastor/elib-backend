@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import cloudinary from "../config/cloudinary";
 import createHttpError from "http-errors";
 import bookModel from "./bookModel";
+import fs from 'node:fs'
 
 const createBook = async (req: Request, res: Response, next: NextFunction) => {
     const {title,genre} = req.body
@@ -56,9 +57,14 @@ const createBook = async (req: Request, res: Response, next: NextFunction) => {
         file: bookFileUploadResult.secure_url
     })
 
+    //delete Temp files
+    await fs.promises.unlink(filePath)
+    await fs.promises.unlink(bookFilePath)
 
 
-    res.json({});
+    res.status(201).json({
+      id: newBook._id
+    });
   } catch (error) {
     console.log(error);
     return next(createHttpError(500, "Error while uploading the files."));
