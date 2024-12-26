@@ -123,7 +123,7 @@ const updateBook = async (req: Request, res: Response, next: NextFunction) => {
     const uploadResultPdf = await cloudinary.uploader.upload(bookFilePath, {
       resource_type: "raw",
       filename_override: completeFileName,
-      folder: "book-covers",
+      folder: "book-pdfs",
       format: "pdf",
     });
 
@@ -161,4 +161,66 @@ const listBooks = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-export { createBook, updateBook, listBooks };
+const getSingleBook = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const bookId = req.params.bookId;
+
+  try {
+    const book = await bookModel.findOne({ _id: bookId });
+    if (!book) {
+      return next(createHttpError(404, "Book not found"));
+    }
+    res.status(200).json(book);
+  } catch (error) {
+    return next(createHttpError(500, "Error white getting a book"));
+    console.log(error);
+  }
+};
+
+const deleteBook = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+
+  const bookId = req.params.bookId
+
+  const book = await bookModel.findOne({_id:bookId})
+  if(!book){
+    return next(createHttpError(404,"Book not found"))
+  }
+
+  //check access
+  const _req = req as AuthRequest;
+  if (book.author.toString() !== _req.userId) {
+    return next(createHttpError(403, "You can not delete others book."));
+  }
+
+  //deleting file from cloudinary
+  //for getting public id - split in proper format like book-covers/sdfsdgsgsdsadss
+  const coverFileSplits = book.coverImage.split('/')
+  const coverImagePublicId = coverFileSplits.at(-2) + "/" + coverFileSplits.at(-1)?.split(".").at(-2)
+  
+  // for file publicId
+  const bookFileSplits = book.coverImage.split('/')
+  const bookFilePublicId = bookFileSplits.at(-2) + "/" + bookFileSplits.at(-1)
+  
+  //destroying now -i.e. deleting files from cloudinary
+  //todo: add error block
+  await cloudinary.uploader.destroy(coverImagePublicId)
+  await cloudinary.uploader.destroy(bookFilePublicId,{
+    resource_type: "raw"
+  })
+
+
+  //delete data from database
+  //todo: add error block
+  await bookModel.deleteOne({ _id : bookId})
+
+  res.sendStatus(204);
+};
+
+export { createBook, updateBook, listBooks, getSingleBook, deleteBook };
